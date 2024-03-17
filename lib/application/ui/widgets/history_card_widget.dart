@@ -17,7 +17,7 @@ class HistoryCardWidget extends StatelessWidget {
       padding: const EdgeInsets.all(8.0),
       decoration: BoxDecoration(
         borderRadius: BorderRadius.circular(8.0),
-        color: Colors.black38,
+        color: Colors.black12,
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,

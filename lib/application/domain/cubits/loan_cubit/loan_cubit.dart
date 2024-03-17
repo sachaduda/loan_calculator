@@ -3,21 +3,45 @@ part of 'cubit.dart';
 class LoanCubit extends Cubit<LoanState> {
   LoanCubit() : super(LoanState.initial());
   void saveLoanAmount(String amount) {
-    emit(state.copyWith(
-        loanModel: state.loanModel
-            .copyWith(loanAmount: amount.isEmpty ? const Wrapped.value(null) : Wrapped.value(int.tryParse(amount)))));
+    emit(
+      state.copyWith(
+        loanModel: state.loanModel.copyWith(
+          loanAmount: amount.isEmpty
+              ? const Wrapped.value(null)
+              : Wrapped.value(
+                  int.tryParse(amount),
+                ),
+        ),
+      ),
+    );
   }
 
   void saveInterestRate(String rate) {
-    emit(state.copyWith(
-        loanModel: state.loanModel
-            .copyWith(interestRate: rate.isEmpty ? const Wrapped.value(null) : Wrapped.value(double.tryParse(rate)))));
+    emit(
+      state.copyWith(
+        loanModel: state.loanModel.copyWith(
+          interestRate: rate.isEmpty
+              ? const Wrapped.value(null)
+              : Wrapped.value(
+                  double.tryParse(rate),
+                ),
+        ),
+      ),
+    );
   }
 
   void saveTerm(String term) {
-    emit(state.copyWith(
-        loanModel: state.loanModel
-            .copyWith(term: term.isEmpty ? const Wrapped.value(null) : Wrapped.value(int.tryParse(term)))));
+    emit(
+      state.copyWith(
+        loanModel: state.loanModel.copyWith(
+          term: term.isEmpty
+              ? const Wrapped.value(null)
+              : Wrapped.value(
+                  int.tryParse(term),
+                ),
+        ),
+      ),
+    );
   }
 
   void saveAmountType(AmountType amountType) {
@@ -28,14 +52,19 @@ class LoanCubit extends Cubit<LoanState> {
     final resultModel =
         state.loanModel.amountType == AmountType.annuity ? _calculateAnnuityResult() : _calculateDifferentiatedResult();
 
-    emit(state.copyWith(calculationResultModel: resultModel));
+    if (resultModel.monthlyPayment.isNaN || resultModel.summPayment.isNaN || resultModel.overPayment.isNaN) {
+      emit(state.copyWith(loanCubitState: LoanCubitState.error));
+      _clearForm();
+    } else {
+      emit(state.copyWith(calculationResultModel: resultModel, loanCubitState: LoanCubitState.withData));
 
-    final loanHistory = LoanHistoryModel(
-      loanModel: state.loanModel,
-      calculationResultModel: resultModel,
-    );
+      final loanHistory = LoanHistoryModel(
+        loanModel: state.loanModel,
+        calculationResultModel: resultModel,
+      );
 
-    _saveLoanHistory(loanHistory);
+      _saveLoanHistory(loanHistory);
+    }
   }
 
   void _saveLoanHistory(LoanHistoryModel loanHistory) async {
@@ -53,6 +82,7 @@ class LoanCubit extends Cubit<LoanState> {
         loanAmount * ((interestRate * pow(1 + interestRate, term)) / ((pow((1 + interestRate), term) - 1)));
     final double summPayment = (monthlyPayment * term);
     final double overPayment = (summPayment - loanAmount);
+
     return CalculationResultModel(
       monthlyPayment: monthlyPayment,
       summPayment: summPayment,
@@ -80,6 +110,20 @@ class LoanCubit extends Cubit<LoanState> {
       monthlyPayment: monthlyPrincipalPayment,
       summPayment: totalPayments,
       overPayment: totalPayments - loanAmount,
+    );
+  }
+
+  void _clearForm() {
+    emit(
+      state.copyWith(
+        loanModel: state.loanModel.copyWith(loanAmount: null, interestRate: null, term: null),
+        calculationResultModel: CalculationResultModel(
+          monthlyPayment: 0,
+          summPayment: 0,
+          overPayment: 0,
+        ),
+        loanCubitState: LoanCubitState.initial,
+      ),
     );
   }
 

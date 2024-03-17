@@ -11,8 +11,17 @@ class HistoryCubit extends Cubit<HistoryState> {
       final loanHistoryList = historyBox.values.toList();
 
       emit(state.copyWith(loanHistoryList: List.from(loanHistoryList), state: HistoryCubitState.withData));
+
+      _addListener(historyBox);
     } catch (error) {
       emit(state.copyWith(state: HistoryCubitState.error));
     }
+  }
+
+  void _addListener(Box<LoanHistoryModel> historyBox) {
+    historyBox.watch().listen((event) {
+      final loanHistoryList = historyBox.values.toList();
+      emit(state.copyWith(loanHistoryList: List.from(loanHistoryList), state: HistoryCubitState.withData));
+    });
   }
 }

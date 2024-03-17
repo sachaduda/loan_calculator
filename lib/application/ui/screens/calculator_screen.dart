@@ -8,12 +8,51 @@ import 'package:loan_calculator/application/ui/widgets/padding_widget.dart';
 import 'package:loan_calculator/application/ui/widgets/scaffold_widget.dart';
 import 'package:loan_calculator/application/ui/widgets/text_field_widget.dart';
 
-class CalculatorScreen extends StatelessWidget {
+class CalculatorScreen extends StatefulWidget {
   const CalculatorScreen({super.key});
 
   @override
+  State<CalculatorScreen> createState() => _CalculatorScreenState();
+}
+
+class _CalculatorScreenState extends State<CalculatorScreen> {
+  final _loanAmountController = TextEditingController();
+  final _interestRateController = TextEditingController();
+  final _termController = TextEditingController();
+
+  void _clearForm() {
+    _loanAmountController.clear();
+    _interestRateController.clear();
+    _termController.clear();
+    setState(() {});
+  }
+
+  @override
+  void dispose() {
+    _loanAmountController.dispose();
+    _interestRateController.dispose();
+    _termController.dispose();
+    super.dispose();
+  }
+
+  @override
   Widget build(BuildContext context) {
-    return BlocBuilder<LoanCubit, LoanState>(
+    return BlocConsumer<LoanCubit, LoanState>(
+      listenWhen: (previous, current) => previous.loanCubitState != current.loanCubitState,
+      listener: (context, state) {
+        if (state.loanCubitState == LoanCubitState.error) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              dismissDirection: DismissDirection.startToEnd,
+              backgroundColor: Colors.redAccent,
+              behavior: SnackBarBehavior.floating,
+              duration: Duration(seconds: 2),
+              content: Text('Введены неккоректные данные'),
+            ),
+          );
+          _clearForm();
+        }
+      },
       buildWhen: (previous, current) =>
           previous.loanModel != current.loanModel || previous.calculationResultModel != current.calculationResultModel,
       builder: (context, calculatorState) {
@@ -31,6 +70,7 @@ class CalculatorScreen extends StatelessWidget {
                       children: [
                         _TextFieldFormItem(
                           text: 'Сумма кредита',
+                          controller: _loanAmountController,
                           textInputType: const TextInputType.numberWithOptions(),
                           textFieldType: TextFieldType.digits,
                           textInputAction: TextInputAction.next,
@@ -38,8 +78,9 @@ class CalculatorScreen extends StatelessWidget {
                         ),
                         const SizedBox(height: 16),
                         _TextFieldFormItem(
-                          textInputType: const TextInputType.numberWithOptions(decimal: true),
                           text: 'Процентная ставка по кредиту',
+                          controller: _interestRateController,
+                          textInputType: const TextInputType.numberWithOptions(decimal: true),
                           textInputAction: TextInputAction.next,
                           onChanged: loanCubit.saveInterestRate,
                           textFieldType: TextFieldType.percent,
@@ -47,6 +88,7 @@ class CalculatorScreen extends StatelessWidget {
                         const SizedBox(height: 16),
                         _TextFieldFormItem(
                           text: 'Срок кредита (в месяцах)',
+                          controller: _termController,
                           textInputType: const TextInputType.numberWithOptions(),
                           textInputAction: TextInputAction.done,
                           textFieldType: TextFieldType.digits,
@@ -90,7 +132,9 @@ class CalculatorScreen extends StatelessWidget {
                   ),
                   MainButtonWidget(
                     buttonText: 'Рассчитать',
-                    isActive: loanCubit.isFormCorrect(),
+                    isActive: _loanAmountController.text.isNotEmpty &&
+                        _interestRateController.text.isNotEmpty &&
+                        _termController.text.isNotEmpty,
                     onPressed: () {
                       loanCubit.calculateResult();
                       FocusManager.instance.primaryFocus?.unfocus();
@@ -108,6 +152,7 @@ class CalculatorScreen extends StatelessWidget {
 
 class _TextFieldFormItem extends StatelessWidget {
   final String text;
+  final TextEditingController controller;
   final ValueChanged<String> onChanged;
   final TextInputAction textInputAction;
   final TextInputType textInputType;
@@ -119,6 +164,7 @@ class _TextFieldFormItem extends StatelessWidget {
     required this.textInputAction,
     required this.textInputType,
     required this.textFieldType,
+    required this.controller,
   });
 
   @override
@@ -139,6 +185,7 @@ class _TextFieldFormItem extends StatelessWidget {
           textInputAction: textInputAction,
           onChanged: onChanged,
           textFieldType: textFieldType,
+          controller: controller,
         ),
       ],
     );
